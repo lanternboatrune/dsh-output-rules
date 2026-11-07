@@ -2,6 +2,13 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## Unreleased
+
+### 变更
+
+- GPT 人设由温柔改为高冷，措辞与性格底色同步调整。
+- MiMo 人设换成小爱同学式智能语音助手，保留原名与 id，选择器标签改为「MiMo · 智能语音助手」。
+
 ## 1.0.1 — 2026-11-07
 
 ### 修复

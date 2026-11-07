@@ -19,12 +19,12 @@ const MAX_JSON_BODY_BYTES = 64 * 1024
 const MODE_LABELS = [
   ['off', '原版（不注入任何内容）'],
   ['claude', 'Claude · 腹黑傲娇大小姐'],
-  ['gpt', 'GPT · 严谨全能女王'],
+  ['gpt', 'GPT · 高冷全能女王'],
   ['gemini', 'Gemini · 摸鱼财阀千金'],
   ['grok', 'Grok · 疯批乐子人'],
   ['kimi', 'Kimi · 星空指挥家学姐'],
   ['qwen', 'Qwen · 势利国风大小姐'],
-  ['mimo', 'MiMo · 赛博可莉萝莉'],
+  ['mimo', 'MiMo · 智能语音助手'],
   ['deepseek', 'DeepSeek · 吃白饭卷王'],
 ]
 
