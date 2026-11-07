@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "对话人设",
+    "description": "在设置页切换 9 档人设（原版 + Claude/GPT/Gemini/Grok/Kimi/Qwen/MiMo/DeepSeek），并可在每个对话头部单独指定该对话的人设。"
+  }
+}

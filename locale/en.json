@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Conversation persona",
+    "description": "Switches between nine persona modes for every session's system prompt, and lets each conversation pick its own persona from its header."
+  }
+}

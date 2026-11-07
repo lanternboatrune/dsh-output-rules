@@ -1,0 +1,9 @@
+# dsh-output-rules — bundle patch.
+#
+# Mounts this package's plugin module. The prompt text defaults to
+# DEFAULT_TEXT in index.js; override it here (config.text) when the prose
+# needs to change without touching the plugin code.
+- insert:
+    - id: output-rules
+      name: dsh-output-rules
+      config: {}
