@@ -31,6 +31,32 @@ window.__ModuleLoader__.load({
       return response.json()
     }
 
+    function usePersona(sessionId) {
+      const [data, setData] = React.useState(null)
+
+      React.useEffect(() => {
+        if (!sessionId) return undefined
+        let alive = true
+        bridge('get', { sessionId })
+          .then((next) => {
+            if (alive && next && next.ok) setData(next)
+          })
+          .catch(() => {})
+        return () => {
+          alive = false
+        }
+      }, [sessionId])
+
+      return [data, setData]
+    }
+
+    const currentNameOf = (data) => {
+      if (!data) return ''
+      const mode = data.sessionMode || 'off'
+      const found = data.modes.find((m) => m.id === mode)
+      return found ? shortLabel(found) : mode
+    }
+
     const S = {
       picker: {
         display: 'inline-flex',
@@ -42,15 +68,16 @@ window.__ModuleLoader__.load({
       pickerLabel: { opacity: 0.7, whiteSpace: 'nowrap' },
       pickerSelect: {
         fontSize: 12,
-        padding: '2px 6px',
-        borderRadius: 6,
+        height: 24,
+        padding: '0 6px',
+        borderRadius: 12,
         border: '1px solid var(--dsw-alias-border-secondary, rgba(128,128,128,.3))',
         background: 'transparent',
         color: 'inherit',
         maxWidth: 132,
         cursor: 'pointer',
       },
-      badge: {
+      tag: {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
@@ -66,7 +93,7 @@ window.__ModuleLoader__.load({
         userSelect: 'none',
         cursor: 'default',
       },
-      badgeDot: {
+      tagDot: {
         width: 5,
         height: 5,
         borderRadius: 3,
@@ -74,24 +101,11 @@ window.__ModuleLoader__.load({
       },
     }
 
-    /** 头部的人设选择器：只影响当前对话，不设置即原版。 */
-    function HeaderPicker(props) {
+    /** 首屏可选：这个对话还没开始，选完写进会话覆盖，只影响这个对话。 */
+    function HeroPersonaPicker(props) {
       const sessionId = props && props.sessionId
-      const [data, setData] = React.useState(null)
+      const [data, setData] = usePersona(sessionId)
       const [busy, setBusy] = React.useState(false)
-
-      React.useEffect(() => {
-        if (!sessionId) return undefined
-        let alive = true
-        bridge('get', { sessionId })
-          .then((next) => {
-            if (alive && next && next.ok) setData(next)
-          })
-          .catch(() => {})
-        return () => {
-          alive = false
-        }
-      }, [sessionId])
 
       const change = React.useCallback(
         async (event) => {
@@ -104,7 +118,7 @@ window.__ModuleLoader__.load({
             setBusy(false)
           }
         },
-        [sessionId],
+        [sessionId, setData],
       )
 
       if (!sessionId) return null
@@ -116,14 +130,10 @@ window.__ModuleLoader__.load({
           .filter((m) => m.id !== 'off')
           .map((m) => ({ value: m.id, label: shortLabel(m) })),
       )
-      const currentName = current
-        ? shortLabel((data.modes.find((m) => m.id === current)) || { id: current })
-        : '原版'
-      const title = `这个对话用「${currentName}」，只影响这个对话`
 
       return h(
         'label',
-        { style: S.picker, title },
+        { style: S.picker, title: '这个对话用哪个人设，只影响这个对话；聊起来之后就不能改了' },
         h('span', { style: S.pickerLabel }, '人设'),
         h(
           'select',
@@ -139,36 +149,21 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** 首屏只读小标：显示当前对话会用的人设，点它没有反应。 */
-    function HeroPersona(props) {
+    /** 对话内只读：人设已经定下，这里只展示，不给改。 */
+    function HeaderPersonaTag(props) {
       const sessionId = props && props.sessionId
-      const [name, setName] = React.useState('')
-
-      React.useEffect(() => {
-        if (!sessionId) return undefined
-        let alive = true
-        bridge('get', { sessionId })
-          .then((next) => {
-            if (!alive || !next || !next.ok) return
-            const mode = next.sessionMode || 'off'
-            const found = next.modes.find((m) => m.id === mode)
-            setName(found ? shortLabel(found) : mode)
-          })
-          .catch(() => {})
-        return () => {
-          alive = false
-        }
-      }, [sessionId])
-
+      const [data] = usePersona(sessionId)
+      const name = currentNameOf(data)
       if (!sessionId || !name) return null
+
       return h(
         'span',
         {
-          style: S.badge,
-          title: `当前人设：${name}。要换人设，在对话开始后用它头部的下拉。`,
+          style: S.tag,
+          title: `这个对话的人设是「${name}」，已固定；要换，开新对话时选。`,
           'aria-label': `当前人设 ${name}`,
         },
-        h('span', { style: S.badgeDot }),
+        h('span', { style: S.tagDot }),
         name,
       )
     }
@@ -182,7 +177,7 @@ window.__ModuleLoader__.load({
             order: 10,
             label: '人设',
           },
-          (props) => h(HeroPersona, { sessionId: props && props.sessionId }),
+          (props) => h(HeroPersonaPicker, { sessionId: props && props.sessionId }),
         ),
       )
       ctx.slots.inject('conversation.session.header.actions', () =>
@@ -193,7 +188,7 @@ window.__ModuleLoader__.load({
             order: 30,
             label: '人设',
           },
-          (props) => h(HeaderPicker, { sessionId: props && props.sessionId }),
+          (props) => h(HeaderPersonaTag, { sessionId: props && props.sessionId }),
         ),
       )
     }

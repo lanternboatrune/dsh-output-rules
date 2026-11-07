@@ -16,12 +16,12 @@
 
 | 位置 | 插槽 | 行为 |
 |---|---|---|
-| 新对话首屏，工作区与预设控件右侧 | `conversation.hero.options` | 只读小标，显示这个对话当前会用的人设，点不了 |
-| 对话头部，标题右侧 | `conversation.session.header.actions` | 下拉选择，只对当前 `sessionId` 生效 |
+| 新对话首屏，工作区与预设控件右侧 | `conversation.hero.options` | 可选下拉，选完写进这个对话的覆盖项 |
+| 对话头部，标题右侧 | `conversation.session.header.actions` | 只读小标，显示已固定的人设，不给改 |
 
-写进 `state.json` 的 `sessions[sessionId]`；没有条目就是原版。选「原版」等于删掉该会话的覆盖项。
+写进 `state.json` 的 `sessions[sessionId]`；没有条目就是原版。选「原版」等于删掉该会话的覆盖项。发言之后人设就固定了，想换只能在开新对话的首屏选。
 
-设置页里**没有**人设页：全局档已经移除，选人设只在这个对话的下拉里做。
+设置页里**没有**人设页：全局档已经移除。
 
 ## 安装
 
