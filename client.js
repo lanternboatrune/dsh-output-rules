@@ -8,21 +8,7 @@ window.__ModuleLoader__.load({
 
     const BRIDGE = '/api/dsh-output-rules'
 
-    /** 只显示模型名，不带任何后缀介绍。 */
-    const FULL_LABELS = {
-      off: '原版',
-      claude: 'Claude',
-      gpt: 'GPT',
-      gemini: 'Gemini',
-      grok: 'Grok',
-      kimi: 'Kimi',
-      qwen: 'Qwen',
-      mimo: 'MiMo',
-      deepseek: 'DeepSeek',
-    }
-    const labelOf = (m) => FULL_LABELS[m.id] || m.label
-
-    /** 头部太窄，下拉里只放短名；完整描述留在设置页。 */
+    /** 下拉和标签都只用短名，完整描述留在 personas.json。 */
     const SHORT_LABELS = {
       off: '原版',
       claude: 'Claude',
@@ -34,7 +20,7 @@ window.__ModuleLoader__.load({
       mimo: 'MiMo',
       deepseek: 'DeepSeek',
     }
-    const shortLabel = (m) => SHORT_LABELS[m.id] || m.label
+    const shortLabel = (m) => SHORT_LABELS[m.id] || m.label || m.id
 
     async function bridge(action, payload) {
       const response = await fetch(BRIDGE, {
@@ -43,42 +29,6 @@ window.__ModuleLoader__.load({
         body: JSON.stringify({ action, ...(payload || {}) }),
       })
       return response.json()
-    }
-
-    function useState() {
-      const [state, setState] = React.useState(null)
-      const [error, setError] = React.useState('')
-      const [busy, setBusy] = React.useState(false)
-
-      React.useEffect(() => {
-        let alive = true
-        bridge('get')
-          .then((data) => {
-            if (!alive) return
-            if (data && data.ok) setState(data)
-            else setError((data && data.error) || '读取失败')
-          })
-          .catch((e) => alive && setError(String(e)))
-        return () => {
-          alive = false
-        }
-      }, [])
-
-      const save = React.useCallback(async (payload) => {
-        setBusy(true)
-        setError('')
-        try {
-          const data = await bridge('set', payload)
-          if (data && data.ok) setState(data)
-          else setError((data && data.error) || '保存失败')
-        } catch (e) {
-          setError(String(e))
-        } finally {
-          setBusy(false)
-        }
-      }, [])
-
-      return { state, error, busy, save }
     }
 
     const S = {
@@ -100,145 +50,31 @@ window.__ModuleLoader__.load({
         maxWidth: 132,
         cursor: 'pointer',
       },
-      wrap: { display: 'flex', flexDirection: 'column', gap: 10, padding: '2px 0' },
-      title: { fontSize: 13, fontWeight: 600 },
-      hint: { fontSize: 12, opacity: 0.65, lineHeight: 1.6 },
-      list: { display: 'flex', flexDirection: 'column', gap: 6 },
-      row: (active) => ({
-        display: 'flex',
+      badge: {
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
-        padding: '7px 10px',
-        borderRadius: 8,
-        cursor: 'pointer',
-        fontSize: 13,
-        border: `1px solid ${active ? 'var(--dsw-alias-brand-primary, #4D6BFE)' : 'var(--dsw-alias-border-secondary, rgba(128,128,128,.25))'}`,
-        background: active ? 'color-mix(in srgb, var(--dsw-alias-brand-primary, #4D6BFE) 12%, transparent)' : 'transparent',
-      }),
-      dot: (active) => ({
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        flex: '0 0 auto',
-        background: active ? 'var(--dsw-alias-brand-primary, #4D6BFE)' : 'transparent',
-        border: `1px solid ${active ? 'var(--dsw-alias-brand-primary, #4D6BFE)' : 'var(--dsw-alias-border-secondary, rgba(128,128,128,.45))'}`,
-      }),
-      area: {
-        width: '100%',
-        minHeight: 64,
-        boxSizing: 'border-box',
+        gap: 5,
+        height: 24,
+        padding: '0 9px',
+        borderRadius: 12,
         fontSize: 12,
-        lineHeight: 1.5,
-        padding: 8,
-        borderRadius: 8,
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
         color: 'inherit',
-        background: 'transparent',
-        border: '1px solid var(--dsw-alias-border-secondary, rgba(128,128,128,.25))',
+        opacity: 0.75,
+        border: '1px solid var(--dsw-alias-border-secondary, rgba(128,128,128,.3))',
+        userSelect: 'none',
+        cursor: 'default',
       },
-      btn: {
-        alignSelf: 'flex-start',
-        fontSize: 12,
-        padding: '5px 12px',
-        borderRadius: 7,
-        cursor: 'pointer',
-        color: '#fff',
-        border: 'none',
+      badgeDot: {
+        width: 5,
+        height: 5,
+        borderRadius: 3,
         background: 'var(--dsw-alias-brand-primary, #4D6BFE)',
-        opacity: 1,
       },
-      err: { fontSize: 12, color: '#e5484d' },
     }
 
-    function ModeRow(props) {
-      return h(
-        'div',
-        {
-          style: S.row(props.active),
-          role: 'button',
-          tabIndex: 0,
-          onClick: props.onClick,
-          onKeyDown: (e) => (e.key === 'Enter' || e.key === ' ') && props.onClick(),
-        },
-        h('span', { style: S.dot(props.active) }),
-        h('span', null, props.label),
-      )
-    }
-
-    function Panel() {
-      const { state, error, busy, save } = useState()
-      const [draft, setDraft] = React.useState(null)
-      const text = draft === null ? (state ? state.text || '' : '') : draft
-
-      if (!state) {
-        return h('div', { style: S.wrap }, h('div', { style: S.hint }, error || '读取中…'))
-      }
-
-      return h(
-        'div',
-        { style: S.wrap },
-        h('div', { style: S.title }, '回复人设'),
-        h(
-          'div',
-          { style: S.hint },
-          '全局人设，下一轮生效。单个对话想换，用它头部的「人设」下拉，不影响别的对话。「原版」= 不加任何人设。',
-        ),
-        h(
-          'div',
-          { style: S.list },
-          state.modes.map((m) =>
-            h(ModeRow, {
-              key: m.id,
-              label: labelOf(m),
-              active: state.mode === m.id,
-              onClick: () => !busy && save({ mode: m.id }),
-            }),
-          ),
-        ),
-        h('div', { style: { ...S.hint, marginTop: 4 } }, '自定义人设文本（可选，非空时覆盖上面所选人设）：'),
-        h('textarea', {
-          style: S.area,
-          value: text,
-          placeholder: '留空 = 使用所选人设',
-          onChange: (e) => setDraft(e.target.value),
-        }),
-        h(
-          'button',
-          {
-            style: { ...S.btn, opacity: busy ? 0.6 : 1 },
-            disabled: busy,
-            onClick: () => !busy && save({ text }),
-          },
-          busy ? '保存中…' : '保存自定义文本',
-        ),
-        error ? h('div', { style: S.err }, error) : null,
-      )
-    }
-
-    function Icon(props) {
-      const size = (props && props.size) || 18
-      const active = !!(props && props.active)
-      return h(
-        'svg',
-        {
-          width: size,
-          height: size,
-          viewBox: '0 0 24 24',
-          fill: 'none',
-          stroke: 'currentColor',
-          strokeWidth: 1.7,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-          style: { opacity: active ? 1 : 0.72 },
-          'aria-hidden': 'true',
-        },
-        h('path', { d: 'M20.5 12.4c0 3.7-3.8 6.7-8.5 6.7-1 0-2-.14-2.9-.4L4 20.5l1.2-3.5c-1.1-1.2-1.7-2.7-1.7-4.6 0-3.7 3.8-6.7 8.5-6.7s8.5 3 8.5 6.7Z' }),
-        h('path', { d: 'M9 11.4h6' }),
-        h('path', { d: 'M9 14.2h3.6' }),
-        h('path', { d: 'M17.4 3.2l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6.6-1.7Z', fill: 'currentColor', stroke: 'none' }),
-      )
-    }
-
-    /** 会话头部的人设选择器：不设置时跟随全局（设置页里的选择）。 */
+    /** 头部的人设选择器：只影响当前对话，不设置即原版。 */
     function HeaderPicker(props) {
       const sessionId = props && props.sessionId
       const [data, setData] = React.useState(null)
@@ -272,26 +108,18 @@ window.__ModuleLoader__.load({
       )
 
       if (!sessionId) return null
-      const globalMode = data ? data.mode : 'off'
-      const globalName = data
-        ? (() => {
-            const found = data.modes.find((m) => m.id === globalMode)
-            return found ? shortLabel(found) : globalMode
-          })()
-        : ''
       const current = data ? data.sessionMode || '' : ''
       const options = [
-        { value: '', label: globalName ? `跟随全局 · ${globalName}` : '跟随全局' },
-      ].concat((data ? data.modes : []).map((m) => ({ value: m.id, label: shortLabel(m) })))
-
+        { value: '', label: '原版' },
+      ].concat(
+        (data ? data.modes : [])
+          .filter((m) => m.id !== 'off')
+          .map((m) => ({ value: m.id, label: shortLabel(m) })),
+      )
       const currentName = current
-        ? shortLabel(data.modes.find((m) => m.id === current) || { id: current, label: current })
-        : ''
-      const title = data
-        ? current
-          ? `这个对话单独用 ${currentName}，其他对话不受影响`
-          : `没单独设置，跟随全局（现在是 ${globalName}）`
-        : '单独指定这个对话的人设'
+        ? shortLabel((data.modes.find((m) => m.id === current)) || { id: current })
+        : '原版'
+      const title = `这个对话用「${currentName}」，只影响这个对话`
 
       return h(
         'label',
@@ -306,32 +134,55 @@ window.__ModuleLoader__.load({
             onChange: change,
             'aria-label': '对话人设',
           },
-          options.map((o) => h('option', { key: o.value || 'global', value: o.value }, o.label)),
+          options.map((o) => h('option', { key: o.value || 'off', value: o.value }, o.label)),
         ),
       )
     }
 
-    function apply(ctx) {
-      const render = (props) => h(Panel, { close: props && props.close })
-      ctx.slots.inject('settings.section', () =>
-        ctx.slots.register(
-          {
-            name: 'settings.section',
-            id: 'persona-mode',
-            order: 35,
-            label: '对话人设',
-          },
-          render,
-        ),
+    /** 首屏只读小标：显示当前对话会用的人设，点它没有反应。 */
+    function HeroPersona(props) {
+      const sessionId = props && props.sessionId
+      const [name, setName] = React.useState('')
+
+      React.useEffect(() => {
+        if (!sessionId) return undefined
+        let alive = true
+        bridge('get', { sessionId })
+          .then((next) => {
+            if (!alive || !next || !next.ok) return
+            const mode = next.sessionMode || 'off'
+            const found = next.modes.find((m) => m.id === mode)
+            setName(found ? shortLabel(found) : mode)
+          })
+          .catch(() => {})
+        return () => {
+          alive = false
+        }
+      }, [sessionId])
+
+      if (!sessionId || !name) return null
+      return h(
+        'span',
+        {
+          style: S.badge,
+          title: `当前人设：${name}。要换人设，在对话开始后用它头部的下拉。`,
+          'aria-label': `当前人设 ${name}`,
+        },
+        h('span', { style: S.badgeDot }),
+        name,
       )
-      ctx.slots.inject('settings.section.icon', () =>
+    }
+
+    function apply(ctx) {
+      ctx.slots.inject('conversation.hero.options', () =>
         ctx.slots.register(
           {
-            name: 'settings.section.icon',
-            id: 'persona-mode',
-            order: 35,
+            name: 'conversation.hero.options',
+            id: 'persona-badge',
+            order: 10,
+            label: '人设',
           },
-          (props) => h(Icon, { size: props && props.size, active: props && props.active }),
+          (props) => h(HeroPersona, { sessionId: props && props.sessionId }),
         ),
       )
       ctx.slots.inject('conversation.session.header.actions', () =>

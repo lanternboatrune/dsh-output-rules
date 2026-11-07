@@ -117,12 +117,21 @@ async function readJsonBody(req) {
 export function apply(ctx, config = {}) {
   const state = normalize({ mode: DEFAULT_MODE, text: '', order: DEFAULT_ORDER, ...config, ...readState() })
 
+  const PROBE_FILE = path.join(HERE, 'probe.log')
+  const probe = (line) => {
+    try {
+      fs.appendFileSync(PROBE_FILE, `${new Date().toISOString()} ${line}\n`)
+    } catch {}
+  }
+
   const personaText = (mode) => readPersonas()[mode] || ''
   const globalText = () => (state.text ? state.text : personaText(state.mode))
   const sessionOverride = (sessionId) =>
     typeof sessionId === 'string' && sessionId ? state.sessions[sessionId] : undefined
   const resolveText = (sessionId) => {
     const override = sessionOverride(sessionId)
+    const resolved = override || state.mode
+    probe(`resolve sid=${sessionId} override=${override || '-'} mode=${state.mode} -> ${resolved}`)
     return override ? personaText(override) : globalText()
   }
 
@@ -141,44 +150,17 @@ export function apply(ctx, config = {}) {
 
   const persist = () => writeState({ mode: state.mode, text: state.text, sessions: state.sessions })
 
-  // 全局兜底段：所有 agent 都看得到，除非某个 agent 在自己作用域里挂了同名段。
+  // 单一段：文本在组装时求值，context.agent 就是当前会话的 agent，按它查会话覆盖。
+  // 不再按 agent 作用域注册遮蔽段——作用域链一旦对不上就静默退回全局，正是旧实现的坑。
   ctx.effect(() => ctx.systemPrompt.section({
     name: SECTION_NAME,
     order: state.order,
-    text: () => globalText(),
+    text: (assembly) => {
+      const agent = assembly && assembly.agent
+      const sessionId = agent && agent.id ? String(agent.id) : ''
+      return resolveText(sessionId)
+    },
   }), 'output-rules.section()')
-
-  // 按会话覆盖：每个 agent 在自己的作用域注册同名 section，遮住全局那段。
-  const agentSections = new Map()
-  ctx.effect(() => {
-    const disposeListener = ctx.on('agent/created', ({ agent }) => {
-      // 这个回调抛错会让 agent 创建失败，所以任何缺失都安静跳过。
-      try {
-        // 必须走属性访问而不是 `.get('systemPrompt')`：cordis 的 reflect.get
-        // 会把 `this` 绑到根 ReflectService，追踪到根 ctx，section 便落进 global
-        // 层并与全局段撞名抛错。`agent.ctx.systemPrompt` 才追踪到 agent 作用域。
-        const prompt = agent && agent.ctx ? agent.ctx.systemPrompt : undefined
-        if (!prompt) return
-        const sessionId = String(agent.id)
-        const previous = agentSections.get(sessionId)
-        if (previous) previous()
-        const disposeSection = agent.ctx.effect(() => prompt.section({
-          name: SECTION_NAME,
-          order: state.order,
-          text: () => resolveText(sessionId),
-        }), 'output-rules.section()')
-        agentSections.set(sessionId, disposeSection)
-      } catch (error) {
-        // 忽略：退回到全局 section；但留一行日志，避免以后再静默失效。
-        ctx.logger?.warn?.(`output-rules: per-session section skipped: ${String(error)}`)
-      }
-    })
-    return () => {
-      disposeListener()
-      for (const dispose of agentSections.values()) dispose()
-      agentSections.clear()
-    }
-  }, 'output-rules.agents')
 
   ctx.inject(['webServer'], (sctx) => {
     sctx.effect(() => sctx.webServer.register({
@@ -214,6 +196,7 @@ export function apply(ctx, config = {}) {
             state.text = body.text.trim()
           }
           persist()
+          probe(`set global mode=${state.mode} textLen=${state.text.length}`)
           writeJson(res, 200, { ok: true, ...snapshot(body.sessionId) })
           return
         }
@@ -233,6 +216,7 @@ export function apply(ctx, config = {}) {
             return
           }
           persist()
+          probe(`setSession sid=${sessionId} -> ${mode === '' || mode === 'global' ? 'global' : mode}`)
           writeJson(res, 200, { ok: true, ...snapshot(sessionId) })
           return
         }
