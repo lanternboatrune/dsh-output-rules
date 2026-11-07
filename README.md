@@ -21,8 +21,9 @@
 ## 安装
 
 ```powershell
+git clone https://github.com/nonomint/dsh-output-rules.git
 # 由会话内的 plugin_manager 完成，不要把本目录写进 profile
-plugin_manager install_bundle <工作区>\develop-plugins\dsh-output-rules
+plugin_manager install_bundle <clone 目录>\dsh-output-rules
 ```
 
 ## 设置页（client 半）
