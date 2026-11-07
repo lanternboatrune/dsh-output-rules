@@ -27,8 +27,8 @@
 
 ```powershell
 git clone https://github.com/nonomint/dsh-output-rules.git
-# 由会话内的 plugin_manager 完成，不要把本目录写进 profile
-plugin_manager install_bundle <clone 目录>\dsh-output-rules
+# 由会话内的 plugin_manager 完成，它会往 profile 写一条 link: 依赖
+plugin_manager install_bundle target=link:<clone 目录>/dsh-output-rules
 ```
 
 ## 两部分
