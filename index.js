@@ -84,9 +84,36 @@ function normalize(input) {
   return { mode, text, order, sessions: sanitizeSessions(input.sessions) }
 }
 
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+
+/** Host 头去掉端口后必须与回环主机名全等，不能用前缀匹配，否则 127.0.0.1.attacker.com 会被放行。 */
+function hostnameOf(hostHeader) {
+  const raw = String(hostHeader ?? '').trim().toLowerCase()
+  if (!raw) return ''
+  if (raw.startsWith('[')) {
+    const end = raw.indexOf(']')
+    return end === -1 ? raw : raw.slice(0, end + 1)
+  }
+  const colon = raw.lastIndexOf(':')
+  return colon === -1 ? raw : raw.slice(0, colon)
+}
+
+/** 校验 Host 与 Origin；Origin 存在时必须同样是回环地址，缺省时按同源 GET 之外的情况拒绝。 */
 function isLocalRequest(req) {
-  const host = String(req.headers?.host ?? '').toLowerCase()
-  return host.startsWith('127.0.0.1') || host.startsWith('localhost') || host.startsWith('[::1]')
+  if (!LOOPBACK_HOSTS.has(hostnameOf(req.headers?.host))) return false
+  const origin = req.headers?.origin
+  if (origin === undefined) return true
+  try {
+    return LOOPBACK_HOSTS.has(new URL(String(origin)).hostname.toLowerCase())
+  } catch {
+    return false
+  }
+}
+
+/** 只接受 application/json，避免 text/plain 的 simple request 绕过 preflight。 */
+function isJsonRequest(req) {
+  const type = String(req.headers?.['content-type'] ?? '').toLowerCase()
+  return type.startsWith('application/json')
 }
 
 function writeJson(res, status, body) {
@@ -173,6 +200,10 @@ export function apply(ctx, config = {}) {
         }
         if (req.method !== 'POST') {
           writeJson(res, 405, { ok: false, error: 'POST only' })
+          return
+        }
+        if (!isJsonRequest(req)) {
+          writeJson(res, 415, { ok: false, error: 'application/json required' })
           return
         }
         const body = await readJsonBody(req)

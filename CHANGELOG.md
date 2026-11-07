@@ -2,6 +2,14 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## 1.1.1 — 2026-11-08
+
+### 安全
+
+- 桥接的 Host 校验由前缀匹配改为回环主机全等匹配，并校验 Origin，堵住 `127.0.0.1.evil.com` 这类绕过。
+- 写入接口要求 `content-type: application/json`，其余一律 415。
+
+
 ## 1.1.0 — 2026-11-08
 
 ### 修复
