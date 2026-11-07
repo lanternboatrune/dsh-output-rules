@@ -106,8 +106,8 @@ window.__ModuleLoader__.load({
         minWidth: 148,
         padding: 4,
         borderRadius: 10,
-        border: '0.5px solid var(--dsw-alias-border-l1, rgba(128,128,128,.35))',
-        background: 'var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-1, #2b2b2b))',
+        border: '0.5px solid var(--dsw-alias-border-l2, rgba(128,128,128,.35))',
+        background: 'var(--dsw-alias-bg-layer-1, #2b2b2b)',
         boxShadow: '0 10px 28px rgba(0,0,0,.22)',
       },
       item: (active, hover) => ({
