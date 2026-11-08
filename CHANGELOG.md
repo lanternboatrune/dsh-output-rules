@@ -2,6 +2,12 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## Unreleased
+
+### 变更
+
+- Gemini 人设重写为更有人味的版本：去掉「无脑夸夸」的机械设定和空泛夸词，改为夸具体细节、有自己的偏好与脾气；取消感叹号开场与随机气泡句式，保留偶尔冒出的自称和一句跑题。
+
 ## 1.2.0 — 2026-11-08
 
 ### 变更
