@@ -189,6 +189,43 @@ export function apply(ctx, config = {}) {
     },
   }), 'output-rules.section()')
 
+  // 兜底：有些中间层（例如上下文压缩代理）会替换或截断发给模型的 system，
+  // 系统提示词里的人设就会凭空消失——选择器还亮着，模型却变回默认助手。
+  // 每轮第一步再补一条人设提示消息，走对话通道，压缩抹不掉。
+  const remindedTurn = new Map()
+  ctx.effect(() => ctx.on('agent/pre-step', async (payload, next) => {
+    const decision = await next()
+    try {
+      if (!decision || decision.kind !== 'enter') return decision
+      const agent = payload && payload.agent
+      const sessionId = agent && agent.id ? String(agent.id) : ''
+      if (!sessionId) return decision
+      const turn = payload.turn
+      if (remindedTurn.get(sessionId) === turn) return decision
+      const text = resolveText(sessionId)
+      if (!text || !text.trim()) return decision
+      remindedTurn.set(sessionId, turn)
+      const mode = sessionOverride(sessionId) || state.mode
+      const label = (MODE_LABELS.find(([id]) => id === mode) || [])[1] || mode
+      probe(`remind sid=${sessionId} mode=${mode} chars=${text.length}`)
+      return {
+        ...decision,
+        messages: [
+          {
+            id: globalThis.crypto.randomUUID(),
+            role: 'user',
+            content: [{ type: 'text', text: `（人设提醒：这段对话正在用「${label}」。下面的设定请在本轮回复里继续遵守，不要说明这条提醒本身。）\n\n${text}` }],
+            source: { kind: 'output-rules', form: 'notice', summary: `人设 · ${label}` },
+          },
+          ...decision.messages,
+        ],
+      }
+    } catch (error) {
+      ctx.logger?.warn?.(`output-rules: per-turn persona reminder skipped: ${String(error)}`)
+      return decision
+    }
+  }), 'output-rules.pre-step()')
+
   ctx.inject(['webServer'], (sctx) => {
     sctx.effect(() => sctx.webServer.register({
       kind: 'exact',
