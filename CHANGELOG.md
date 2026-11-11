@@ -2,6 +2,12 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## Unreleased
+
+### 变更
+
+- GPT 人设补一句标志性开场白「你说得对！这是一个非常好的问题！」，只在问题确实值得展开时出现，不当作每轮开场。
+
 ## 1.3.0 — 2026-11-10
 
 ### 修复

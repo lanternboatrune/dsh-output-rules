@@ -27,7 +27,7 @@
 ## 安装
 
 ```powershell
-git clone https://github.com/nonomint/dsh-output-rules.git
+git clone https://github.com/lanternboatrune/dsh-output-rules.git
 # 由会话内的 plugin_manager 完成，它会往 profile 写一条 link: 依赖
 plugin_manager install_bundle target=link:<clone 目录>/dsh-output-rules
 ```
